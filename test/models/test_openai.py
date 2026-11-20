@@ -172,6 +172,16 @@ class TestOpenAICompatibleGenerationParameters(unittest.TestCase):
         self.assertEqual(payload["frequency_penalty"], -0.2)
         self.assertEqual(generation_kwargs, original_generation_kwargs)
 
+    def test_chat_backend_forwards_reasoning_effort_only_when_requested(self):
+        completions = _CaptureCompletions()
+        model = ChatOpenAICompatible.__new__(ChatOpenAICompatible)
+        _configure_openai_model(model, completions, model_version="gpt-5")
+
+        model.generate_until([_chat_request({"max_new_tokens": 64, "reasoning_effort": "high"}), _chat_request({"max_new_tokens": 64})])
+
+        self.assertEqual(completions.payloads[0]["reasoning_effort"], "high")
+        self.assertNotIn("reasoning_effort", completions.payloads[1])
+
     def test_chat_backend_accepts_one_response_choice(self):
         completions = _CaptureCompletions()
         model = ChatOpenAICompatible.__new__(ChatOpenAICompatible)
