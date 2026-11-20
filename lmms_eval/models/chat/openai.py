@@ -327,7 +327,7 @@ class OpenAICompatible(OpenAICompatibleSimple):
                     for block in message["content"]:
                         if block["type"] == "image_url":
                             block["image_url"]["detail"] = self.image_detail
-            for parameter in ("top_p", "seed", "presence_penalty", "frequency_penalty", "n"):
+            for parameter in ("top_p", "seed", "presence_penalty", "frequency_penalty", "n", "reasoning_effort"):
                 value = request_gen_kwargs.get(parameter)
                 if value is not None:
                     payload[parameter] = value
