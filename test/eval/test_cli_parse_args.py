@@ -1,3 +1,4 @@
+import os
 import sys
 import tempfile
 import unittest
@@ -155,6 +156,29 @@ class TestCliTaskFiles(unittest.TestCase):
 
     def test_unregistered_chat_task_keeps_its_request_name(self) -> None:
         self._assert_local_task_request_name("chat")
+
+
+class TestCliTrackerArgsLog(unittest.TestCase):
+    def test_hf_token_is_redacted_from_the_tracker_args_log(self) -> None:
+        token = "hf_" + "x" * 34
+        argv = ["lmms-eval", "--model", "dummy", "--tasks", "mme", "--hf_hub_log_args", "hub_results_org=demo"]
+        with (
+            patch.dict(os.environ, {"HF_TOKEN": token}),
+            patch.object(sys, "argv", argv),
+            patch.object(main_module, "TaskManager") as manager,
+            patch.object(main_module, "EvaluationTracker") as tracker,
+            patch.object(main_module.evaluator, "simple_evaluate", return_value=None),
+            patch.object(main_module, "eval_logger") as logger,
+        ):
+            manager.return_value.match_tasks.return_value = ["mme"]
+            _, args = main_module.parse_eval_args()
+            main_module.cli_evaluate_single(args)
+
+        tracker_logs = [call.args[0] for call in logger.info.call_args_list if call.args and str(call.args[0]).startswith("Evaluation tracker args")]
+        self.assertEqual(len(tracker_logs), 1)
+        self.assertNotIn(token, tracker_logs[0])
+        self.assertIn("demo", tracker_logs[0])
+        self.assertEqual(tracker.call_args.kwargs["token"], token)
 
 
 if __name__ == "__main__":
