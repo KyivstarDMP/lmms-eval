@@ -13,6 +13,7 @@ from typing import Any, Optional
 from lmms_eval.api.registry import register_model
 from lmms_eval.llm_judge.openai_endpoint import resolve_openai_model_base
 from lmms_eval.models.chat.openai import OpenAICompatible as OpenAICompatibleChatBase
+from lmms_eval.models.model_utils.concurrency_control import parse_bool
 from lmms_eval.models.simple.litellm import _PLACEHOLDER_API_KEY, _LiteLLMClientShim
 
 
@@ -28,10 +29,13 @@ class LiteLLMCompatible(OpenAICompatibleChatBase):
         model: Optional[str] = None,
         base_url: Optional[str] = None,
         api_key: Optional[str] = None,
+        drop_params: bool = False,
         **kwargs: Any,
     ) -> None:
         resolved_api_key = api_key or os.getenv("OPENAI_API_KEY")
         resolved_base_url = base_url or resolve_openai_model_base()
+        # None unless set: the parent's 10 s default must not replace LiteLLM's own timeout.
+        timeout = kwargs.get("timeout")
 
         super().__init__(
             model_version=model_version,
@@ -41,4 +45,4 @@ class LiteLLMCompatible(OpenAICompatibleChatBase):
             azure_openai=False,
             **kwargs,
         )
-        self.client = _LiteLLMClientShim(api_key=resolved_api_key, base_url=resolved_base_url)
+        self.client = _LiteLLMClientShim(api_key=resolved_api_key, base_url=resolved_base_url, timeout=timeout, drop_params=parse_bool(drop_params))

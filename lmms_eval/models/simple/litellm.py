@@ -18,6 +18,7 @@ from typing import Any, Optional
 
 from lmms_eval.api.registry import register_model
 from lmms_eval.llm_judge.openai_endpoint import resolve_openai_model_base
+from lmms_eval.models.model_utils.concurrency_control import parse_bool
 from lmms_eval.models.simple.openai import OpenAICompatible as OpenAICompatibleBase
 
 # Placeholder key passed to ``openai.OpenAI(api_key=...)`` inside the super().__init__()
@@ -30,9 +31,11 @@ _PLACEHOLDER_API_KEY = "sk-litellm-placeholder"
 class _LiteLLMChatCompletions:
     """Duck-typed ``openai.OpenAI().chat.completions`` surface backed by ``litellm.completion``."""
 
-    def __init__(self, api_key: Optional[str], base_url: Optional[str]) -> None:
+    def __init__(self, api_key: Optional[str], base_url: Optional[str], timeout: Optional[float] = None, drop_params: bool = False) -> None:
         self._api_key = api_key
         self._base_url = base_url
+        self._timeout = timeout
+        self._drop_params = drop_params
 
     def create(self, **kwargs: Any) -> Any:
         import litellm  # lazy import — ``litellm`` is an optional extra
@@ -41,6 +44,10 @@ class _LiteLLMChatCompletions:
             kwargs.setdefault("api_key", self._api_key)
         if self._base_url is not None:
             kwargs.setdefault("api_base", self._base_url)
+        if self._timeout is not None:
+            kwargs.setdefault("timeout", self._timeout)
+        if self._drop_params:
+            kwargs.setdefault("drop_params", True)
         return litellm.completion(**kwargs)
 
 
@@ -58,8 +65,8 @@ class _LiteLLMClientShim:
     provider-specific env vars (``ANTHROPIC_API_KEY``, ``GEMINI_API_KEY``, ``AWS_*``, ...).
     """
 
-    def __init__(self, api_key: Optional[str], base_url: Optional[str]) -> None:
-        self.chat = _LiteLLMChat(_LiteLLMChatCompletions(api_key=api_key, base_url=base_url))
+    def __init__(self, api_key: Optional[str], base_url: Optional[str], timeout: Optional[float] = None, drop_params: bool = False) -> None:
+        self.chat = _LiteLLMChat(_LiteLLMChatCompletions(api_key=api_key, base_url=base_url, timeout=timeout, drop_params=drop_params))
 
 
 @register_model("litellm")
@@ -77,10 +84,13 @@ class LiteLLMCompatible(OpenAICompatibleBase):
         model: Optional[str] = None,
         base_url: Optional[str] = None,
         api_key: Optional[str] = None,
+        drop_params: bool = False,
         **kwargs: Any,
     ) -> None:
         resolved_api_key = api_key or os.getenv("OPENAI_API_KEY")
         resolved_base_url = base_url or resolve_openai_model_base()
+        # None unless set: the parent's 10 s default must not replace LiteLLM's own timeout.
+        timeout = kwargs.get("timeout")
 
         # The parent __init__ builds an openai.OpenAI(...) client and raises if no API
         # key is resolvable. Hand it a placeholder so construction succeeds; we swap
@@ -94,4 +104,4 @@ class LiteLLMCompatible(OpenAICompatibleBase):
             azure_openai=False,
             **kwargs,
         )
-        self.client = _LiteLLMClientShim(api_key=resolved_api_key, base_url=resolved_base_url)
+        self.client = _LiteLLMClientShim(api_key=resolved_api_key, base_url=resolved_base_url, timeout=timeout, drop_params=parse_bool(drop_params))
