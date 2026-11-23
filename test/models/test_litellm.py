@@ -59,6 +59,41 @@ class TestLiteLLMShim(unittest.TestCase):
         self.assertNotIn("api_key", kwargs)
         self.assertNotIn("api_base", kwargs)
 
+    def test_shim_timeout_and_drop_params_yield_to_per_request_values(self):
+        completion = _install_litellm_stub()
+        completion.return_value = _fake_chat_completion()
+
+        from lmms_eval.models.simple.litellm import _LiteLLMClientShim
+
+        shim = _LiteLLMClientShim(api_key=None, base_url=None, timeout=120, drop_params=True)
+        shim.chat.completions.create(model="openai/gpt-5", messages=[])
+        self.assertEqual(completion.call_args.kwargs["timeout"], 120)
+        self.assertIs(completion.call_args.kwargs["drop_params"], True)
+
+        shim.chat.completions.create(model="openai/gpt-5", messages=[], timeout=5, drop_params=False)
+        self.assertEqual(completion.call_args.kwargs["timeout"], 5)
+        self.assertIs(completion.call_args.kwargs["drop_params"], False)
+
+    def test_backends_forward_only_explicit_timeout_and_drop_params(self):
+        completion = _install_litellm_stub()
+        completion.return_value = _fake_chat_completion()
+
+        from lmms_eval.models.chat.litellm import LiteLLMCompatible as ChatLiteLLM
+        from lmms_eval.models.simple.litellm import LiteLLMCompatible as SimpleLiteLLM
+
+        for backend in (SimpleLiteLLM, ChatLiteLLM):
+            with self.subTest(backend=backend.__module__):
+                default = backend(model="openai/gpt-4o-mini", api_key="sk-user")
+                default.client.chat.completions.create(model="openai/gpt-4o-mini", messages=[])
+                self.assertNotIn("timeout", completion.call_args.kwargs)
+                self.assertNotIn("drop_params", completion.call_args.kwargs)
+
+                configured = backend(model="openai/gpt-4o-mini", api_key="sk-user", timeout=120, drop_params=True)
+                configured.client.chat.completions.create(model="openai/gpt-4o-mini", messages=[])
+                self.assertEqual(configured.timeout, 120)
+                self.assertEqual(completion.call_args.kwargs["timeout"], 120)
+                self.assertIs(completion.call_args.kwargs["drop_params"], True)
+
     def test_litellm_registered_as_simple_and_chat(self):
         """Confirm the model manifest is discoverable under both backends."""
         from lmms_eval.models import MODEL_REGISTRY_V2
