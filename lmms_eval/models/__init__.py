@@ -164,6 +164,7 @@ _BUILTIN_CHAT_TEMPLATE_MODELS = {
     "huggingface": "Huggingface",
     "litellm": "LiteLLMCompatible",
     "async_openai": "AsyncOpenAIChat",
+    "openai_stream": "OpenAIStreamChat",
     "async_hf_model": "AsyncHFModel",
     "longvila": "LongVila",
     "llava_onevision1_5": "Llava_OneVision1_5",
