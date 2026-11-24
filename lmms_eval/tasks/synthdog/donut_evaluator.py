@@ -3,11 +3,15 @@ from typing import Any, Dict, List, Union
 from loguru import logger as eval_logger
 from nltk import edit_distance
 
+from lmms_eval.tasks._task_utils.nltk_distance import allow_long_inputs
+
 try:
     import zss
     from zss import Node
 except ImportError:
     eval_logger.debug("Please install zss library. You can install it by running 'pip install zss'")
+
+allow_long_inputs()
 
 
 class JSONParseEvaluator:

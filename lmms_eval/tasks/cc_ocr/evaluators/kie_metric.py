@@ -10,11 +10,14 @@ import zss
 from nltk import edit_distance
 from zss import Node
 
+from lmms_eval.tasks._task_utils.nltk_distance import allow_long_inputs
 from lmms_eval.tasks.cc_ocr.evaluators.common import (
     kie_normalize_text,
     normalize_values_of_nested_dict,
     post_process_to_json,
 )
+
+allow_long_inputs()
 
 
 def _flatten(data: dict) -> List:

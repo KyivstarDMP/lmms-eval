@@ -13,7 +13,10 @@ from typing import Dict, List
 
 import nltk
 
+from lmms_eval.tasks._task_utils.nltk_distance import allow_long_inputs
 from lmms_eval.tasks.cc_ocr.evaluators.common import convert_to_halfwidth
+
+allow_long_inputs()
 
 # Patterns to strip from doc predictions before scoring
 _DOC_PATTERNS = [
