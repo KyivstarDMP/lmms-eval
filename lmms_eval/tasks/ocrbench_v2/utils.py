@@ -56,6 +56,14 @@ def _make_score_buckets():
 teds = TEDS(n_jobs=32)
 
 
+def ocrbench_v2_process_docs_en(dataset):
+    return dataset.filter(lambda question_type: question_type.endswith(" en"), input_columns=["type"])
+
+
+def ocrbench_v2_process_docs_cn(dataset):
+    return dataset.filter(lambda question_type: question_type.endswith(" cn"), input_columns=["type"])
+
+
 def ocrbench_v2_doc_to_visual(doc):
     # Assuming the 'doc' dictionary has a key 'image' with image data
     return [doc["image"].convert("RGB")]
