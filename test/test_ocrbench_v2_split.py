@@ -20,3 +20,8 @@ def test_language_tasks_score_like_the_combined_one():
     chinese = [row for row in results if row["question_type"].endswith(" cn")]
     assert utils.ocrbench_v2_aggregate_accuracy_en(english, None) == utils.ocrbench_v2_aggregate_accuracy_en(results, None) == 0.5
     assert utils.ocrbench_v2_aggregate_accuracy_cn(chinese, None) == utils.ocrbench_v2_aggregate_accuracy_cn(results, None) == 0.5
+
+
+def test_a_language_score_is_the_mean_of_its_category_means():
+    results = [{"question_type": "text recognition en", "score": 1.0}] * 3 + [{"question_type": "text spotting en", "score": 0.0}]
+    assert utils.ocrbench_v2_aggregate_accuracy_en(results, None) == 0.5
