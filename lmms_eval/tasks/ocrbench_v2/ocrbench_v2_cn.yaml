@@ -1,0 +1,7 @@
+task: "ocrbench_v2_cn"
+include: _default_template_yaml
+process_docs: !function utils.ocrbench_v2_process_docs_cn
+metric_list:
+  - metric: ocrbench_v2_accuracy_cn
+    aggregation: !function utils.ocrbench_v2_aggregate_accuracy_cn
+    higher_is_better: true
