@@ -232,6 +232,10 @@ _SPLIT_TO_METRIC = {
 }
 
 
+def _is_unanswerable(answer: str) -> bool:
+    return answer.strip("[]'\" .").lower() == "unanswerable"
+
+
 def _score(doc, prediction: str):
     pred = prediction.strip().strip(".").strip("\n")
     answers = doc["Answer"] if isinstance(doc["Answer"], list) else [doc["Answer"]]
@@ -253,6 +257,11 @@ def _score(doc, prediction: str):
     )
 
     out = {"relaxed_overall": score}
+    if _is_unanswerable(gt):
+        out["relaxed_unanswerable"] = score
+    else:
+        out["relaxed_answerable"] = score
+        out["false_unanswerable"] = float(_is_unanswerable(pred))
     metric = _SPLIT_TO_METRIC.get(qt)
     if metric is not None:
         out[metric] = score

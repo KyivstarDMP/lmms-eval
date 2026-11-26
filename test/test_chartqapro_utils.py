@@ -59,6 +59,17 @@ def test_cot_scores_the_final_answer_only(response, expected):
 
 def test_cot_and_direct_share_the_scorer():
     doc = _doc("Multi Choice", ["Which?"], ["b"])
-    assert utils.chartqapro_process_results(doc, ["B"]) == {"relaxed_overall": 1.0, "relaxed_multi_choice": 1.0}
+    assert utils.chartqapro_process_results(doc, ["B"]) == {"relaxed_overall": 1.0, "relaxed_multi_choice": 1.0, "relaxed_answerable": 1.0, "false_unanswerable": 0.0}
     assert utils.chartqapro_cot_process_results(doc, ["x is larger.\nThe answer is b."])["relaxed_overall"] == 1.0
     assert utils.chartqapro_process_results(doc, ["x is larger.\nThe answer is b."])["relaxed_overall"] == 0.0
+
+
+def test_unanswerable_questions_are_scored_apart():
+    unanswerable = _doc("Factoid", ["How many in 2031?"], ["Unanswerable"])
+    assert utils.chartqapro_process_results(unanswerable, ["unanswerable"]) == {"relaxed_overall": 1.0, "relaxed_factoid": 1.0, "relaxed_unanswerable": 1.0}
+    assert utils.chartqapro_process_results(unanswerable, ["42"])["relaxed_unanswerable"] == 0.0
+
+    answerable = _doc("Factoid", ["How many?"], ["3"])
+    refused = utils.chartqapro_process_results(answerable, ["['Unanswerable']"])
+    assert refused["relaxed_answerable"] == 0.0 and refused["false_unanswerable"] == 1.0
+    assert "relaxed_unanswerable" not in refused
