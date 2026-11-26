@@ -25,5 +25,14 @@ metric_list:
   - metric: relaxed_multi_choice
     aggregation: mean
     higher_is_better: true
+  - metric: relaxed_answerable
+    aggregation: mean
+    higher_is_better: true
+  - metric: relaxed_unanswerable
+    aggregation: mean
+    higher_is_better: true
+  - metric: false_unanswerable
+    aggregation: mean
+    higher_is_better: false
 metadata:
   - version: 1.0
