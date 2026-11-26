@@ -385,12 +385,11 @@ def ocrbench_v2_process_results(doc, results):
 
 
 def calculate_average_score(categories, score_buckets):
-    """Weighted average across categories by sample count."""
-    total_score = sum(sum(score_buckets[cat]) for cat in categories)
-    total_count = sum(len(score_buckets[cat]) for cat in categories)
-    if total_count == 0:
+    """Macro average over categories."""
+    means = [sum(score_buckets[cat]) / len(score_buckets[cat]) for cat in categories if score_buckets[cat]]
+    if not means:
         return 0.0
-    return total_score / total_count
+    return sum(means) / len(means)
 
 
 ENGLISH_TASKS = ["text_recognition_en", "text_detection_en", "text_spotting_en", "relationship_extraction_en", "element_parsing_en", "mathematical_calculation_en", "visual_text_understanding_en", "knowledge_reasoning_en"]
