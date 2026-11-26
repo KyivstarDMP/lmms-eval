@@ -34,3 +34,31 @@ def test_conversation_history_and_paragraph_reach_the_prompt():
     prompt = utils.chartqapro_doc_to_text(doc)
     assert prompt.startswith("Chart notes.\nYou are given a multi-turn conversation")
     assert prompt.endswith("Conversation: ['First?', '1'] Question: Second?")
+
+
+def test_cot_prompt_asks_for_a_final_sentence():
+    prompt = utils.chartqapro_doc_to_text(_doc("Factoid", ["How many?"], ["3"]), {"prompt_style": "cot"})
+    assert "think step-by-step" in prompt and 'like "The answer is X"' in prompt
+    with pytest.raises(ValueError, match="prompt_style"):
+        utils.chartqapro_doc_to_text(_doc("Factoid", ["How many?"], ["3"]), {"prompt_style": "pot"})
+
+
+@pytest.mark.parametrize(
+    ("response", "expected"),
+    [
+        ("Bars are 2 and 1.\nThe answer is 3.", "3"),
+        ("The answer is 2... no.\nThe answer is **b**.", "b"),
+        ("So the final answer is: ['Asia', 'Europe']", "['Asia', 'Europe']"),
+        ("Step 1.\nunanswerable", "unanswerable"),
+        ("", ""),
+    ],
+)
+def test_cot_scores_the_final_answer_only(response, expected):
+    assert utils._final_answer(response) == expected
+
+
+def test_cot_and_direct_share_the_scorer():
+    doc = _doc("Multi Choice", ["Which?"], ["b"])
+    assert utils.chartqapro_process_results(doc, ["B"]) == {"relaxed_overall": 1.0, "relaxed_multi_choice": 1.0}
+    assert utils.chartqapro_cot_process_results(doc, ["x is larger.\nThe answer is b."])["relaxed_overall"] == 1.0
+    assert utils.chartqapro_process_results(doc, ["x is larger.\nThe answer is b."])["relaxed_overall"] == 0.0
