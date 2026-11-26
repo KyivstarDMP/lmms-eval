@@ -20,15 +20,49 @@ def chartqapro_doc_to_visual(doc):
     return [_load_image(doc)]
 
 
-def _format_conversation(questions: List[str], answers: List[str]) -> str:
-    lines: List[str] = []
-    n = len(questions)
-    for i in range(n - 1):
-        lines.append(f"Q{i + 1}: {questions[i].strip()}")
-        if i < len(answers):
-            lines.append(f"A{i + 1}: {str(answers[i]).strip()}")
-    lines.append(f"Q{n}: {questions[-1].strip()}")
-    return "\n".join(lines)
+# Direct prompts of the ChartQAPro paper (Table 6).
+_DIRECT_PROMPTS = {
+    "Factoid": (
+        "You are given a factoid question that you need to answer based on the provided image.\n"
+        "Your answer should be a single word, number, or phrase. If the question is unanswerable based on the information in the provided image, your answer should be unanswerable. "
+        "Do not generate units. But if numerical units such as million, m, billion, B, or K are required, use the exact notation shown in the chart.\n"
+        "If there are multiple answers, put them in brackets using this format ['Answer1', 'Answer2'].\n"
+        "Remember to generate the final answer only without any additional text!\n"
+        "Question: <question>"
+    ),
+    "Multi Choice": (
+        "You are given a question along with different possible answers. You need to select the correct answer from them based on the provided image.\n"
+        "Your answer should be one of the options letters only: a, b, c or d (just the letter itself without any additional text). "
+        "If the question is unanswerable based on the information in the provided image, your answer should be unanswerable.\n"
+        "If there are multiple answers, put them in brackets using this format ['Answer1', 'Answer2'].\n"
+        "Remember to generate the final answer only without any additional text!\n"
+        "Question: <question>"
+    ),
+    "Conversational": (
+        "You are given a multi-turn conversation, and your job is to answer the final question based on the conversation history and the information in the provided image.\n"
+        "Your answer should be a single word, number, or phrase. If the question is unanswerable based on the information in the provided image, your answer should be unanswerable. "
+        "Do not generate units. But if numerical units such as million, m, billion, B, or K are required, use the exact notation shown in the chart.\n"
+        "If there are multiple answers, put them in brackets using this format ['Answer1', 'Answer2'].\n"
+        "Remember to generate the final answer only without any additional text!\n"
+        "Conversation: <conversation> Question: <question>"
+    ),
+    "Fact Checking": (
+        "You are given a fact statement that you need to assess based on the provided image.\n"
+        "Your answer should be either true or false (without any additional text). "
+        "If the question is unanswerable based on the information in the provided image, your answer should be unanswerable.\n"
+        "If there are multiple answers, put them in brackets using this format ['Answer1', 'Answer2'].\n"
+        "Remember to generate the final answer only without any additional text!\n"
+        "Question: <question>"
+    ),
+    "Hypothetical": (
+        "You are given a hypothetical question that you need to answer based on the provided image.\n"
+        "Your answer should be a single word, number, or phrase. If the question is unanswerable based on the information in the provided image, your answer should be unanswerable. "
+        "Do not generate units. But if numerical units such as million, m, billion, B, or K are required, use the exact notation shown in the chart.\n"
+        "If there are multiple answers, put them in brackets using this format ['Answer1', 'Answer2'].\n"
+        "Remember to generate the final answer only without any additional text!\n"
+        "Question: <question>"
+    ),
+}
 
 
 def chartqapro_doc_to_text(doc, lmms_eval_specific_kwargs=None):
@@ -40,18 +74,15 @@ def chartqapro_doc_to_text(doc, lmms_eval_specific_kwargs=None):
     answers = doc.get("Answer") or []
     if not isinstance(answers, list):
         answers = [answers]
-    qt = doc.get("Question Type", "")
+    history = [turn for pair in zip(questions[:-1], answers[:-1]) for turn in pair]
 
-    if qt == "Conversational" and len(questions) > 1:
-        question = _format_conversation(questions, answers)
-    else:
-        question = questions[-1].strip()
+    prompt = _DIRECT_PROMPTS[doc["Question Type"]]
+    prompt = prompt.replace("<conversation>", str(history)).replace("<question>", questions[-1])
 
     paragraph = (doc.get("Paragraph") or "").strip()
-    if paragraph:
-        question = f"Context: {paragraph}\n\n{question}"
+    context = f"{paragraph}\n" if paragraph else ""
 
-    return f"{pre_prompt}{question}{post_prompt}"
+    return f"{pre_prompt}{context}{prompt}{post_prompt}"
 
 
 def chartqapro_doc_to_target(doc):
