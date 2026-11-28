@@ -80,12 +80,18 @@ def test_compute_score_no_longer_credits_a_dropped_sign():
 # --- MathVision prompt: the instruction and the question are separate lines ---
 
 
-@pytest.mark.parametrize("doc_to_text", [mathvision_doc_to_text, mathvision_reason_doc_to_text])
-def test_mathvision_prompt_separates_instruction_and_question(doc_to_text):
-    prompt = doc_to_text({"question": "What is 2+2?", "options": []})
+def test_mathvision_reasoning_prompt_separates_instruction_and_question():
+    prompt = mathvision_reason_doc_to_text({"question": "What is 2+2?", "options": []})
     assert prompt == 'Please solve the problem step by step and put your answer in one "\\boxed{}".\nWhat is 2+2?'
-    prompt = doc_to_text({"question": "Pick one.", "options": ["1", "2"]}, {"mc_prompt": "Answer with the letter."})
+    prompt = mathvision_reason_doc_to_text({"question": "Pick one.", "options": ["1", "2"]}, {"mc_prompt": "Answer with the letter."})
     assert prompt.endswith('"\\boxed{}".\nPick one.\nChoices: A. 1\nB. 2\nAnswer with the letter.')
+
+
+def test_mathvision_prompt_is_the_official_one():
+    instruction = 'Please solve the problem step by step and put your answer in one "\\boxed{}". If it is a multiple choice question, only one letter is allowed in the "\\boxed{}".\n'
+    assert mathvision_doc_to_text({"question": "What is 2+2?", "options": []}) == instruction + "What is 2+2?"
+    assert mathvision_doc_to_text({"question": "Pick one.", "options": ["1", "2"]}) == instruction + "Pick one.\n(A) 1\n(B) 2"
+    assert mathvision_doc_to_text({"question": "Which figure?", "options": list("ABCDE")}) == instruction + "Which figure?"
 
 
 # --- OlympiadBench (boxed): the final box, not the first draft ---

@@ -18,5 +18,3 @@ metric_list:
 lmms_eval_specific_kwargs:
   default:
     prompt_format: solution
-    mc_prompt: "Answer the question with the option's letter from the given choices directly."
-    short_answer_prompt: "Answer the question with a number directly."
